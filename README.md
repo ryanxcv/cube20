@@ -1,7 +1,3 @@
-Sources for Coset Solver and Two-Phase Solver
+This code is based on Tomas Rokicki's implementation of Kociemba's two-phase algorithm, as used in [cube20](https://cube20.org).
 
-These are the sources for the proof of God's number for the
-3x3x3 Rubik's Cube in the half-turn metric.
-
-Right now these programs are in a state of flux and will not
-fully work.  Email me if you need to know what commit works.
+It also uses excerpts from Shuang Chen's [min2phase](https://github.com/cs0x7f/min2phase) for conversion from the [coordinate level](http://kociemba.org/math/coordlevel.htm) to [cubie permutations](http://kociemba.org/math/cubielevel.htm).
