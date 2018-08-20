@@ -142,9 +142,8 @@ void phase2prune::gen_table() {
                                 int ebp1 = permcube::s4mul[ebp][t2];
                                 int dat =
                                     edgeud_remap[m][dst1 + etp1 * 24 + ebp1];
-                                int val = (mem[destat + (dat >> 3)] >>
-                                           (4 * (dat & 7))) &
-                                          0xf;
+                                unsigned int val = (mem[destat + (dat >> 3)] >>
+                                                    (4 * (dat & 7))) & 0xf;
                                 if (val == seek) {
                                   mem[off + (at >> 3)] -= (0xf - newval)
                                                           << (4 * (at & 7));

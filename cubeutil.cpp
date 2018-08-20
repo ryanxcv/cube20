@@ -107,7 +107,7 @@ void parseposition(cubepos &cp, const char *s) {
   }
 }
 void initsymm() {
-  for (int i = 0; i < sizeof(base) / sizeof(base[0]); i++) {
+  for (unsigned int i = 0; i < sizeof(base) / sizeof(base[0]); i++) {
     cubepos cp, cp2;
     parseposition(cp, base[i]);
     const char *p = index(base[i], '/') + 2;
