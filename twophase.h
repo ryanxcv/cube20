@@ -1,5 +1,3 @@
-const char *BANNER =
-    "This is twophase 2.1, (C) 2010-2012 Tomas Rokicki.  All Rights Reserved.";
 #include "phase1prune.h"
 #include "phase2prune.h"
 #include <cstdio>
@@ -11,7 +9,7 @@ int verbose = 1;
 int numthreads = 1;
 int numsols = 1;
 
-int target_length = 0;
+int target_length = 20;
 long long phase2limit = 0xffffffffffffffLL;
 long long phase2total = 0LL;
 
@@ -66,47 +64,8 @@ void display(const cubepos &cp, int seq, long long phase2probes, moveseq sol) {
   }
 }
 
-void report(const cubepos &cp, int seq, long long phase2probes, moveseq sol) {
-  get_global_lock();
-  solved++;
-  if ((int)sol.size() > target_length && target_length)
-    missed_target++;
-  if (seq == next_sequence) {
-    display(cp, seq, phase2probes, sol);
-    next_sequence++;
-    while (queue.find(next_sequence) != queue.end()) {
-      solution &s = queue[next_sequence];
-      display(s.cp, s.seq, s.phase2probes, s.moves);
-      queue.erase(next_sequence);
-      next_sequence++;
-    }
-  } else {
-    queue[seq] = solution(cp, seq, phase2probes, sol);
-  }
-  release_global_lock();
-}
-
-int getwork(cubepos &cp) {
-  static int input_seq = 1;
-  const int BUFSIZE = 1000;
-  char buf[BUFSIZE + 1];
-  get_global_lock();
-  if (fgets(buf, BUFSIZE, stdin) == 0) {
-    release_global_lock();
-    return -1;
-  }
-  if (cp.parse_Singmaster(buf) != 0) {
-    cp = identity_cube;
-    const char *p = buf;
-    moveseq ms = cubepos::parse_moveseq(p);
-    if (*p)
-      error("! could not parse position");
-    for (unsigned int i = 0; i < ms.size(); i++)
-      cp.move(ms[i]);
-  }
-  int r = input_seq++;
-  release_global_lock();
-  return r;
+void display(solution& s) {
+  display(s.cp, s.seq, s.phase2probes, s.moves);
 }
 
 class twophasesolver {
@@ -133,7 +92,7 @@ public:
   char uniq[6];
   int minmindepth;
 
-  void solve(int seqarg, cubepos &cp) {
+  solution solve(int seqarg, cubepos &cp) {
     pos = cp;
     phase2probes = 0;
     bestsol = MAX_MOVES;
@@ -190,6 +149,7 @@ public:
           solvep1(kc6[curm], pc6[curm], d, 0, ALLMOVEMASK, CANONSEQSTART);
         }
     }
+    cout << "asdf" << endl;
 
     moveseq sol;
     int m = cubepos::invm[(solmap % 3) * KOCSYMM];
@@ -202,7 +162,7 @@ public:
       cpt.move(sol[i]);
     if (cpt != pos)
       error("! move sequence doesn't work");
-    report(pos, seq, phase2probes, sol);
+    return solution(cp, seq, phase2probes, sol);
   }
 
   void solvep1(const kocsymm &kc, const permcube &pc, int togo, int sofar,
@@ -282,107 +242,4 @@ public:
     if (phase2probes >= phase2limit && bestsol < MAX_MOVES)
       finished = 1;
   }
-
-  void dowork() {
-    cubepos cp;
-    int seq;
-    while (1) {
-      seq = getwork(cp);
-      if (seq <= 0)
-        return;
-      solve(seq, cp);
-    }
-  }
-
-  static THREAD_RETURN_TYPE THREAD_DECLARATOR worker(void *s) {
-    twophasesolver *solv = (twophasesolver *)s;
-    solv->dowork();
-    return 0;
-  }
-
-  char pad[256];
-} solvers[MAX_THREADS];
-
-int main(int argc, char *argv[]) {
-  double progstart = walltime();
-  duration();
-
-  while (argc > 1 && argv[1][0] == '-') {
-    argc--;
-    argv++;
-    switch (argv[0][1]) {
-    case 'v':
-      verbose++;
-      break;
-    case 'q':
-      verbose = 0;
-      break;
-    case 't':
-      if (sscanf(argv[1], "%d", &numthreads) != 1)
-        error("! bad thread count argument");
-      if (numthreads < 1 || numthreads > MAX_THREADS)
-        error("! bad value for thread count");
-      argc--;
-      argv++;
-      break;
-    case 'n':
-      if (sscanf(argv[1], "%d", &numsols) != 1)
-        error("! bad solution count");
-      argc--;
-      argv++;
-      break;
-    case 'M':
-      if (sscanf(argv[1], "%lld", &phase2limit) != 1)
-        error("! bad argument to -M");
-      argc--;
-      argv++;
-      break;
-    case 's':
-      if (sscanf(argv[1], "%d", &target_length) != 1)
-        error("! bad argument to -s");
-      if (target_length >= MAX_MOVES)
-        target_length = MAX_MOVES - 1;
-      argc--;
-      argv++;
-      break;
-    case 'W':
-      skipwrite++;
-      break;
-    case 'a':
-      axesmask = atol(argv[1]);
-      argv++;
-      argc--;
-      break;
-    default:
-      error("! bad argument");
-    }
-  }
-
-  if (phase2limit >= 0xffffffffffffffLL && target_length == 0 && verbose <= 1)
-    error("! must specify -M, -s, or -v");
-
-  if (verbose)
-    cout << BANNER << endl << flush;
-  phase1prune::init(skipwrite);
-  phase2prune::init(skipwrite);
-
-#ifdef THREADS
-  for (int ti = 1; ti < numthreads; ti++)
-    spawn_thread(ti, twophasesolver::worker, solvers + ti);
-  solvers[0].dowork();
-  for (int ti = 1; ti < numthreads; ti++)
-    join_thread(ti);
-#else
-  solvers[0].dowork();
-#endif
-
-  if (missed_target)
-    cout << "WARNING:  missed target on " << missed_target << " sequences."
-         << endl;
-  phase1prune::check_integrity();
-  phase2prune::check_integrity();
-  cout << "Solved " << solved << " sequences in " << duration()
-       << " seconds with " << phase2total << " probes." << endl;
-  cout << "Completed in " << (walltime() - progstart) << endl;
-  exit(0);
-}
+};
