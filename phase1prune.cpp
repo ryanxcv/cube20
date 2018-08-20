@@ -133,39 +133,6 @@ void phase1prune::gen_table() {
   cout << " done." << endl << flush;
 }
 
-const int CHUNKSIZE = 65536;
-int phase1prune::read_table() {
-  FILE *f = fopen(filename, "rb");
-  if (f == 0)
-    return 0;
-  int togo = memsize;
-  unsigned char *p = mem;
-  int seed = 0;
-  while (togo > 0) {
-    unsigned int siz = (togo > CHUNKSIZE ? CHUNKSIZE : togo);
-    if (fread(p, 1, siz, f) != siz) {
-      cerr << "Out of data in " << filename << endl;
-      fclose(f);
-      return 0;
-    }
-    seed = datahash((unsigned int *)p, siz, seed);
-    togo -= siz;
-    p += siz;
-  }
-  if (fread(&file_checksum, sizeof(int), 1, f) != 1) {
-    cerr << "Out of data in " << filename << endl;
-    fclose(f);
-    return 0;
-  }
-  fclose(f);
-  if (file_checksum != seed) {
-    cerr << "Bad checksum in " << filename << "; expected " << file_checksum
-         << " but saw " << seed << endl;
-    return 0;
-  }
-  return 1;
-}
-
 void phase1prune::write_table() {
   FILE *f = fopen(filename, "wb");
   if (f == 0)
@@ -235,6 +202,8 @@ int phase1prune::lookup(const kocsymm &kc, int togo, int &nextmovemask) {
   return r;
 }
 
+#include "table.h"
+
 void phase1prune::init(int suppress_writing) {
   static int initialized = 0;
   if (initialized)
@@ -242,16 +211,7 @@ void phase1prune::init(int suppress_writing) {
   initialized = 1;
 
   memsize = BYTES_PER_ENTRY * CORNERRSYMM * EDGEOSYMM * EDGEPERM;
-  mem = (unsigned char *)malloc(memsize);
-  if (mem == 0)
-    error("! no memory");
-
-  if (read_table() == 0) {
-    gen_table();
-    file_checksum = datahash((unsigned int *)mem, memsize, 0);
-    if (!suppress_writing)
-      write_table();
-  }
+  read_table_req(&mem, filename, memsize);
 
   for (int m = 0; m < KOCSYMM; m++) {
     for (int f = 0; f < 3; f++) {

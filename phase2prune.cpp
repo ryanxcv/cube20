@@ -195,39 +195,6 @@ void phase2prune::gen_table() {
   cout << " done." << endl << flush;
 }
 
-const int CHUNKSIZE = 65536;
-int phase2prune::read_table() {
-  FILE *f = fopen(filename, "rb");
-  if (f == 0)
-    return 0;
-  int togo = memsize;
-  unsigned int *p = mem;
-  int seed = 0;
-  while (togo > 0) {
-    unsigned int siz = (togo > CHUNKSIZE ? CHUNKSIZE : togo);
-    if (fread(p, 1, siz, f) != siz) {
-      cerr << "Out of data in " << filename << endl;
-      fclose(f);
-      return 0;
-    }
-    seed = datahash(p, siz, seed);
-    togo -= siz;
-    p += siz / sizeof(unsigned int);
-  }
-  if (fread(&file_checksum, sizeof(int), 1, f) != 1) {
-    cerr << "Out of data in " << filename << endl;
-    fclose(f);
-    return 0;
-  }
-  fclose(f);
-  if (file_checksum != seed) {
-    cerr << "Bad checksum in " << filename << "; expected " << file_checksum
-         << " but saw " << seed << endl;
-    return 0;
-  }
-  return 1;
-}
-
 void phase2prune::write_table() {
   FILE *f = fopen(filename, "wb");
   if (f == 0)
@@ -255,6 +222,7 @@ moveseq phase2prune::solve(const permcube &pc, int maxlen) {
     }
   return r;
 }
+
 int phase2prune::solve(const permcube &pc, int togo, int canonstate,
                        moveseq &r) {
   if (lookup(pc) > togo)
@@ -300,6 +268,8 @@ int phase2prune::solve(const permcube &pc, int togo, int canonstate,
   }
   return 0;
 }
+
+#include "table.h"
 
 void phase2prune::init(int suppress_writing) {
   static int initialized = 0;
@@ -363,15 +333,5 @@ void phase2prune::init(int suppress_writing) {
   }
 
   memsize = cornermax * (FACT8 / 2);
-  cout << "Memsize is " << memsize << endl;
-  mem = (unsigned int *)malloc(memsize);
-  if (mem == 0)
-    error("! no memory in phase2prune");
-
-  if (read_table() == 0) {
-    gen_table();
-    file_checksum = datahash(mem, memsize, 0);
-    if (!suppress_writing)
-      write_table();
-  }
+  read_table_req((unsigned char **) &mem, filename, memsize);
 }

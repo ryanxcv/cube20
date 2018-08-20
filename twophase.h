@@ -149,7 +149,6 @@ public:
           solvep1(kc6[curm], pc6[curm], d, 0, ALLMOVEMASK, CANONSEQSTART);
         }
     }
-    cout << "asdf" << endl;
 
     moveseq sol;
     int m = cubepos::invm[(solmap % 3) * KOCSYMM];
