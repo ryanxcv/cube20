@@ -1,5 +1,5 @@
-#ifndef PHASE2PRUNE_H
-#define PHASE2PRUNE_H
+#pragma once
+
 #include "kocsymm.h"
 
 const int FACT8 = 40320;
@@ -29,4 +29,3 @@ public:
   static const char *const filename;
   static int file_checksum;
 };
-#endif

@@ -1,5 +1,5 @@
-#ifndef PHASE1PRUNE_H
-#define PHASE1PRUNE_H
+#pragma once
+
 #include "kocsymm.h"
 
 #ifdef HALF
@@ -31,4 +31,3 @@ public:
   static int file_checksum;
   static const char *const filename;
 };
-#endif

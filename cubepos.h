@@ -1,5 +1,5 @@
-#ifndef CUBEPOS_H
-#define CUBEPOS_H
+#pragma once
+
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
@@ -235,5 +235,3 @@ public:
 };
 
 static cubepos cubepos_initialization_hack(1, 2, 3);
-
-#endif
